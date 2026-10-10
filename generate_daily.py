@@ -1,29 +1,27 @@
 from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
+from random import randint
 
-# Текущая дата в часовом поясе UTC+5
-today = datetime.now(ZoneInfo("Asia/Almaty")).date()
+now = datetime.now(ZoneInfo("Asia/Almaty"))
+count = randint(1, 15)
 
-# Папка для ежедневных файлов
-folder = Path("daily")
-folder.mkdir(exist_ok=True)
+folder = Path("daily") / now.strftime("%Y-%m-%d") / now.strftime("%H%M%S")
+folder.mkdir(parents=True, exist_ok=True)
 
-# Новый файл для каждого дня
-file_path = folder / f"{today}.md"
+for i in range(1, count + 1):
+    file_path = folder / f"update_{i:02}.md"
 
-# Содержимое файла
-content = f"""# Daily update — {today}
+    content = f"""# Daily update {i}
 
-Автоматически созданный ежедневный файл.
+Дата: {now.strftime("%Y-%m-%d")}
+Номер изменения: {i}
+Всего изменений за запуск: {count}
+Время создания: {now.strftime("%H:%M:%S")}
 
-Дата: {today}
-Статус: создано автоматически.
+Автоматически созданный файл.
 """
 
-# Не перезаписываем файл, если он уже существует
-if not file_path.exists():
     file_path.write_text(content, encoding="utf-8")
-    print(f"Создан файл: {file_path}")
-else:
-    print(f"Файл уже существует: {file_path}")
+
+print(f"Создано файлов и запланировано коммитов: {count}")
