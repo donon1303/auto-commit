@@ -1,0 +1,50 @@
+name: commit-bot
+
+on:
+  schedule:
+    - cron: "*/15 0,1 * * *"   # 05:00-06:45 по Екатеринбургу (UTC+5)
+  workflow_dispatch:            # ручной запуск: делает 1 коммит сразу
+
+permissions:
+  contents: write
+
+jobs:
+  commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Commit by daily plan
+        run: |
+          git config user.name "donon1303"
+          git config user.email "331927810+donon1303@users.noreply.github.com"
+
+          python3 - <<'EOF'
+          import os, random, subprocess, datetime as dt
+
+          now = dt.datetime.now(dt.timezone.utc)
+          today = now.strftime("%Y-%m-%d")
+
+          # план на день: сколько коммитов и в каких 15-минутных слотах (0..7)
+          rnd = random.Random(today)
+          total = rnd.randint(1, 3)
+          plan = sorted(rnd.sample(range(8), total))
+
+          slot = min((now.hour * 60 + now.minute) // 15, 7)
+          due = sum(1 for s in plan if s <= slot)
+
+          log = open("activity.log").read() if os.path.exists("activity.log") else ""
+          done = sum(1 for line in log.splitlines() if line.startswith(today))
+
+          todo = 1 if os.environ["GITHUB_EVENT_NAME"] == "workflow_dispatch" else due - done
+          print(f"plan={plan} total={total} slot={slot} done={done} todo={todo}")
+
+          for _ in range(max(todo, 0)):
+              with open("activity.log", "a") as f:
+                  f.write(now.strftime("%Y-%m-%dT%H:%M:%SZ") + " commit\n")
+              subprocess.run(["git", "add", "activity.log"], check=True)
+              subprocess.run(["git", "commit", "-m", "chore: update activity log"], check=True)
+
+          if todo > 0:
+              subprocess.run(["git", "push"], check=True)
+          EOF
